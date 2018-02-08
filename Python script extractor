@@ -1,0 +1,95 @@
+# ############################################################################
+# EXTRACTING TRAINING EXAMPLES FOR GEOSCIENCE SENTIMENT from TEXT            #
+# RESEARCH BLOG www.paulhcleverley.com                                       #
+# Paul H Cleverley 8th Feb  2018 Python 2.7 (Anaconda). Code Version 1.1     #
+# Simple utility script                                                      #
+# Reads an input corpus of text line-by-line checking for matches to         #
+# a given set of geological concepts (e.g. reservoir, earthquake)            #
+# and (if present) an association to Geological Time                         #
+# if it finds a match the whole sentence is printed to be used as a training #
+# set to be labelled by geologists for sentiment (positive/negative) to feed #
+# a supervised machine learning classifier.                                  #                                                       
+##############################################################################
+# Import NLP Libraries 
+import functools
+import re
+import nltk
+from textblob import TextBlob
+from os import chdir
+from nltk import ngrams
+from nltk import word_tokenize
+from nltk.util import skipgrams
+from nltk.stem.snowball import SnowballStemmer
+from fuzzywuzzy import fuzz
+# set filepath
+chdir ("C:\xxxxxxx")
+# Routine for finding exact/fuzzy match between lexicon terms and a text string
+# Lexicon terms are geoscience entities to focus sentiment around
+# Such as paleo, petroleum system elements, mining, volcanics, geohealth, geohazards etc.
+# The string is a line in a geoscience report, article, web page
+def words_in_string(terms, a_string): 
+# tokenize sentence
+    CleantheString = re.sub('\W+',' ', a_string)
+    text_tokens = nltk.word_tokenize(CleantheString)
+# Create a skip-gram of sentence to match against, skip one word, bigram
+    skipper = functools.partial(skipgrams, n=2, k=1)
+    tbigramskip=skipper(text_tokens)
+# Create trigrams
+    ttrigrams=ngrams(text_tokens, 3)
+    text_tokens_set = set(text_tokens)
+    tbigramskip_set = set(tbigramskip)
+    ttrigrams_set = set(ttrigrams)
+# Check exact and fuzzy matches for single words
+    w1=str(terms)
+    for term in text_tokens_set:
+        t1=str(term)
+        pt1=SnowballStemmer("english").stem(term)
+        if (w1==t1 or w1==pt1 or fuzz.ratio(w1,t1)>95):
+            return True
+# Check exact and fuzzy matches for bigrams and skipgrams
+    w1=str(terms)
+    for term in tbigramskip_set:
+        t1=str(term)
+        trim = re.findall(r"\'([A-Za-z]+)\'", t1)
+        t2 = " ".join(trim)
+        pt2=SnowballStemmer("english").stem(t2)
+        if (w1==t2 or w1==pt2 or fuzz.ratio(w1,t2)>95):
+            return True
+# Check for exact and fuzzy matches for trigrams
+    w1=str(terms)
+    for term in ttrigrams_set:
+        t1=str(term)
+        trim = re.findall(r"\'([A-Za-z]+)\'", t1)
+        t2 = " ".join(trim)
+        pt3=SnowballStemmer("english").stem(t2)
+        if (w1==t2 or w1==pt3 or fuzz.ratio(w1,t2)>95):
+            return True
+# Routine for reading file one line at time
+def fopen(filename):
+    '''Opens a text file, readlines(), returns content'''
+    fobj = open(filename, 'r')
+    data = fobj.readlines()
+    fobj.close()
+    return data
+# MAIN
+in_file = fopen('file_short.txt')
+# Seeds for Geological Time
+time = ['time1',  'time2', '..time..n']
+# Seeds for Geological Element (including synonyms, acronyms)
+seeds_1 = ['term1', 'term2', 'term..n']
+for line in in_file:
+# test for clues in text for geological element
+   match=0
+   unique=0
+   line1=line.decode('utf-8')
+   sentence=TextBlob(line1)
+   for i in range(len(seeds_1)):
+      if words_in_string(seeds_1[i], str.lower(line)):
+         for k in range(len(time)):
+            if words_in_string(time[k], str.lower(line)):
+               print ("## Category 1: Term: ", str(seeds_1[i]), " Age: ", str(time[k]), "Sentence: ", str(line), str(sentence.sentiment))
+               match=1
+               if match==0:
+                  print ("## Category 1: Term: ", str(seeds_1[i]), " No Age Found: ",
+################################# End ############################################
+##################################################################################
